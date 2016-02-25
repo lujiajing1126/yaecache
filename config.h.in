@@ -1,5 +1,6 @@
 #cmakedefine HAVE_SIGIGNORE
 #cmakedefine HAVE_STDBOOL_H true
+#cmakedefine HAVE_MLOCKALL
 #define PACKAGE "@PACKAGE@"
 #define VERSION "@VERSION@"
 #if HAVE_STDBOOL_H

@@ -4,10 +4,12 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/resource.h>
+#include <sys/mman.h>
 #include <sysexits.h>
 #include <pwd.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
 
 /* defaults */
 static void settings_init(void);
@@ -45,6 +47,9 @@ static void usage_licence(void) {
 	printf("show licence\n");
 }
 
+static void save_pid(const char *pid_file) {
+	
+}
 
 int main(int argc, char **argv) {
 	/* init local vars */
@@ -54,6 +59,9 @@ int main(int argc, char **argv) {
 	char *username = NULL;
 	struct passwd *pw;
 	bool do_daemonize = false;
+	bool lock_memory = false;
+	int retval = EXIT_SUCCESS;
+	char *pid_file = NULL;
 
 	/* handle SIGINT and SIGTERM */
 	signal(SIGINT,signal_handler);
@@ -70,6 +78,8 @@ int main(int argc, char **argv) {
     	"hiV" /* help, licence info, version */
     	"d"   /* daemon mode */
     	"v"   /* verbose */
+		"k"   /* lock down all paged memory */
+		"P:"  /* save PID in file */
     	))) {
     	switch(ch) {
     		case 'h':
@@ -89,6 +99,12 @@ int main(int argc, char **argv) {
     			break;
     		case 'd':
             	do_daemonize = true;
+            	break;
+            case 'k':
+            	lock_memory = true;
+            	break;
+            case 'P':
+            	pid_file = optarg;
             	break;
     		default:
     			fprintf(stderr, "Illegal argument \"%c\"\n", ch);
@@ -154,9 +170,31 @@ int main(int argc, char **argv) {
         }
     }
 
-    #if HAVE_STDBOOL_H
-    printf("use stdbool");
-    #endif
+    /* lock paged memory if needed */
+    if (lock_memory) {
+#ifdef HAVE_MLOCKALL
+        int res = mlockall(MCL_CURRENT | MCL_FUTURE);
+        if (res != 0) {
+            fprintf(stderr, "warning: -k invalid, mlockall() failed: %s\n",
+                    strerror(errno));
+        }
+#else
+        fprintf(stderr, "warning: -k invalid, mlockall() not supported on this platform.  proceeding without.\n");
+#endif
+    }
 
-	exit(EXIT_SUCCESS);
+    /*
+     * ignore SIGPIPE signals; we can use errno == EPIPE if we
+     * need that information
+     */
+    if (sigignore(SIGPIPE) == -1) {
+        perror("failed to ignore SIGPIPE; sigaction");
+        exit(EX_OSERR);
+    }
+
+    if (pid_file != NULL) {
+        save_pid(pid_file);
+    }
+
+	return retval;
 }

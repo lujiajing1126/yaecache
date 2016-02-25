@@ -21,6 +21,7 @@ endif()
 # function checks
 include(CheckFunctionExists)
 check_function_exists(sigignore HAVE_SIGIGNORE)
+check_function_exists(mlockall HAVE_MLOCKALL)
 
 # include file checks
 include(CheckIncludeFile)
