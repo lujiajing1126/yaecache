@@ -3,3 +3,4 @@ CMakeFiles
 CmakeCache.txt
 Makefile
 yaecache
+config.h
